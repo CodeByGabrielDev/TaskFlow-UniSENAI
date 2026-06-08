@@ -10,7 +10,10 @@ import {
 } from "react";
 import { onAuthStateChanged, User } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import { logout as firebaseLogout } from "@/services/auth.service";
+import {
+  logout as firebaseLogout,
+  getLoginRedirectResult,
+} from "@/services/auth.service";
 import { AppUser } from "@/types/user";
 
 // ─── Tipos do contexto ────────────────────────────────────────────────────────
@@ -24,11 +27,9 @@ interface AuthContextValue {
   refreshUser: () => Promise<void>;
 }
 
-// ─── Criação do contexto ──────────────────────────────────────────────────────
-
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-// ─── Helper: converte User do Firebase para AppUser ───────────────────────────
+// ─── Helper ───────────────────────────────────────────────────────────────────
 
 function toAppUser(user: User): AppUser {
   return {
@@ -50,6 +51,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
+    // Captura resultado de signInWithRedirect (Google/GitHub) ao voltar da página do provedor
+    getLoginRedirectResult().then((redirectUser) => {
+      if (redirectUser) {
+        // Grava o cookie de sessão após login social via redirect
+        document.cookie = "taskflow_session=1; path=/; SameSite=Lax";
+      }
+    });
+
     const unsubscribe = onAuthStateChanged(auth, (fbUser) => {
       if (fbUser) {
         setFirebaseUser(fbUser);
@@ -74,10 +83,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  /**
-   * Força o reload do token/estado do usuário no Firebase.
-   * Útil para atualizar emailVerified após o usuário verificar o e-mail.
-   */
   const refreshUser = useCallback(async () => {
     if (!auth.currentUser) return;
     await auth.currentUser.reload();
@@ -97,7 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// ─── Hook de acesso ao contexto ───────────────────────────────────────────────
+// ─── Hook ─────────────────────────────────────────────────────────────────────
 
 export function useAuthContext(): AuthContextValue {
   const ctx = useContext(AuthContext);

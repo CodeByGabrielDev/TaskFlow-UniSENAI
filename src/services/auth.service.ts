@@ -1,7 +1,9 @@
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  signInWithRedirect,
   signInWithPopup,
+  getRedirectResult,
   signOut,
   sendEmailVerification,
   updateProfile,
@@ -50,16 +52,29 @@ export async function loginWithEmail(
   return credential.user;
 }
 
-// ─── Login Social ─────────────────────────────────────────────────────────────
+// ─── Login Social (Redirect) ──────────────────────────────────────────────────
+// Usamos signInWithRedirect em vez de signInWithPopup para maior compatibilidade
+// em produção (evita bloqueio de popup por domínio não autorizado).
 
-export async function loginWithGoogle(): Promise<User> {
-  const result = await signInWithPopup(auth, googleProvider);
-  return result.user;
+export async function loginWithGoogle(): Promise<void> {
+  await signInWithRedirect(auth, googleProvider);
 }
 
-export async function loginWithGithub(): Promise<User> {
-  const result = await signInWithPopup(auth, githubProvider);
-  return result.user;
+export async function loginWithGithub(): Promise<void> {
+  await signInWithRedirect(auth, githubProvider);
+}
+
+/**
+ * Deve ser chamada no carregamento de cada página para capturar o resultado
+ * do redirect de login social. Retorna o usuário autenticado ou null.
+ */
+export async function getLoginRedirectResult(): Promise<User | null> {
+  try {
+    const result = await getRedirectResult(auth);
+    return result?.user ?? null;
+  } catch {
+    return null;
+  }
 }
 
 // ─── Logout ───────────────────────────────────────────────────────────────────
@@ -78,11 +93,6 @@ export async function resendVerificationEmail(): Promise<void> {
 
 // ─── Exclusão de conta ────────────────────────────────────────────────────────
 
-/**
- * Tenta excluir a conta do usuário atual.
- * Se o Firebase exigir reautenticação (auth/requires-recent-login),
- * lança um erro com code "requires-reauth" para a UI tratar.
- */
 export async function deleteCurrentAccount(): Promise<void> {
   const user = auth.currentUser;
   if (!user) throw new Error("Nenhum usuário autenticado.");
@@ -98,9 +108,6 @@ export async function deleteCurrentAccount(): Promise<void> {
   }
 }
 
-/**
- * Reautentica via e-mail/senha e em seguida exclui a conta.
- */
 export async function reauthAndDeleteWithPassword(
   password: string
 ): Promise<void> {
@@ -112,24 +119,16 @@ export async function reauthAndDeleteWithPassword(
   await deleteUser(user);
 }
 
-/**
- * Reautentica via Google e em seguida exclui a conta.
- */
 export async function reauthAndDeleteWithGoogle(): Promise<void> {
   const user = auth.currentUser;
   if (!user) throw new Error("Nenhum usuário autenticado.");
-
   await reauthenticateWithPopup(user, googleProvider);
   await deleteUser(user);
 }
 
-/**
- * Reautentica via GitHub e em seguida exclui a conta.
- */
 export async function reauthAndDeleteWithGithub(): Promise<void> {
   const user = auth.currentUser;
   if (!user) throw new Error("Nenhum usuário autenticado.");
-
   await reauthenticateWithPopup(user, githubProvider);
   await deleteUser(user);
 }
@@ -165,6 +164,8 @@ export function getFirebaseErrorMessage(code: string): string {
       "Este e-mail já está associado a outro método de login.",
     "auth/requires-recent-login":
       "Por segurança, faça login novamente antes desta operação.",
+    "auth/unauthorized-domain":
+      "Domínio não autorizado. Contate o suporte.",
   };
 
   return messages[code] ?? "Ocorreu um erro inesperado. Tente novamente.";
