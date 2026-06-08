@@ -10,10 +10,7 @@ import {
 } from "react";
 import { onAuthStateChanged, User } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import {
-  logout as firebaseLogout,
-  getLoginRedirectResult,
-} from "@/services/auth.service";
+import { logout as firebaseLogout } from "@/services/auth.service";
 import { AppUser } from "@/types/user";
 
 // ─── Tipos do contexto ────────────────────────────────────────────────────────
@@ -51,14 +48,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
-    // Captura resultado de signInWithRedirect (Google/GitHub) ao voltar da página do provedor
-    getLoginRedirectResult().then((redirectUser) => {
-      if (redirectUser) {
-        // Grava o cookie de sessão após login social via redirect
-        document.cookie = "taskflow_session=1; path=/; SameSite=Lax";
-      }
-    });
-
     const unsubscribe = onAuthStateChanged(auth, (fbUser) => {
       if (fbUser) {
         setFirebaseUser(fbUser);

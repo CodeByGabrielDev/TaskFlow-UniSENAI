@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -13,11 +13,8 @@ import {
   loginWithEmail,
   loginWithGoogle,
   loginWithGithub,
-  getLoginRedirectResult,
   getFirebaseErrorMessage,
 } from "@/services/auth.service";
-
-// ─── Ícones inline ────────────────────────────────────────────────────────────
 
 function GoogleIcon() {
   return (
@@ -38,13 +35,9 @@ function GithubIcon() {
   );
 }
 
-// ─── Cookie helper ────────────────────────────────────────────────────────────
-
 function setSessionCookie() {
   document.cookie = "taskflow_session=1; path=/; SameSite=Lax";
 }
-
-// ─── Componente ───────────────────────────────────────────────────────────────
 
 export function LoginForm() {
   const router = useRouter();
@@ -54,47 +47,26 @@ export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [loadingGoogle, setLoadingGoogle] = useState(false);
   const [loadingGithub, setLoadingGithub] = useState(false);
-  const [checkingRedirect, setCheckingRedirect] = useState(true);
 
-  // ── Captura resultado do signInWithRedirect ao voltar do provedor ──────────
-  useEffect(() => {
-    getLoginRedirectResult()
-      .then((user) => {
-        if (user) {
-          setSessionCookie();
-          toast.success("Login realizado com sucesso!");
-          router.replace(redirectTo);
-        }
-      })
-      .catch((error: unknown) => {
-        const err = error as { code?: string };
-        toast.error(getFirebaseErrorMessage(err.code ?? ""));
-      })
-      .finally(() => {
-        setCheckingRedirect(false);
-      });
-  }, [redirectTo, router]);
-
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<LoginSchema>({
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginSchema>({
     resolver: zodResolver(loginSchema),
   });
+
+  const handleSuccess = (message: string) => {
+    setSessionCookie();
+    toast.success(message);
+    router.replace(redirectTo);
+  };
 
   const onSubmit = async (data: LoginSchema) => {
     try {
       await loginWithEmail(data.email, data.password);
-      setSessionCookie();
-      toast.success("Login realizado com sucesso!");
-      router.replace(redirectTo);
+      handleSuccess("Login realizado com sucesso!");
     } catch (error: unknown) {
       const err = error as { code?: string; message?: string };
-      const msg =
-        err.message?.startsWith("E-mail não verificado")
-          ? err.message
-          : getFirebaseErrorMessage(err.code ?? "");
+      const msg = err.message?.startsWith("E-mail não verificado")
+        ? err.message
+        : getFirebaseErrorMessage(err.code ?? "");
       toast.error(msg);
     }
   };
@@ -102,10 +74,12 @@ export function LoginForm() {
   const handleGoogle = async () => {
     setLoadingGoogle(true);
     try {
-      await loginWithGoogle(); // redireciona para accounts.google.com
+      await loginWithGoogle();
+      handleSuccess("Login com Google realizado!");
     } catch (error: unknown) {
       const err = error as { code?: string };
       toast.error(getFirebaseErrorMessage(err.code ?? ""));
+    } finally {
       setLoadingGoogle(false);
     }
   };
@@ -113,55 +87,37 @@ export function LoginForm() {
   const handleGithub = async () => {
     setLoadingGithub(true);
     try {
-      await loginWithGithub(); // redireciona para github.com
+      await loginWithGithub();
+      handleSuccess("Login com GitHub realizado!");
     } catch (error: unknown) {
       const err = error as { code?: string };
       toast.error(getFirebaseErrorMessage(err.code ?? ""));
+    } finally {
       setLoadingGithub(false);
     }
   };
-
-  // Enquanto verifica o redirect result, mostra loading sutil
-  if (checkingRedirect) {
-    return (
-      <div className="flex justify-center py-8">
-        <Loader2 className="w-6 h-6 text-blue-600 animate-spin" />
-      </div>
-    );
-  }
 
   const isBusy = isSubmitting || loadingGoogle || loadingGithub;
 
   return (
     <div className="space-y-4">
-      {/* Login social */}
       <div className="grid grid-cols-2 gap-3">
-        <button
-          type="button"
-          onClick={handleGoogle}
-          disabled={isBusy}
+        <button type="button" onClick={handleGoogle} disabled={isBusy}
           className="flex items-center justify-center gap-2 border border-gray-300 rounded-lg
             py-2.5 px-4 text-sm font-medium text-gray-700 hover:bg-gray-50
-            disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
+            disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
           {loadingGoogle ? <Loader2 className="w-4 h-4 animate-spin" /> : <GoogleIcon />}
           Google
         </button>
-
-        <button
-          type="button"
-          onClick={handleGithub}
-          disabled={isBusy}
+        <button type="button" onClick={handleGithub} disabled={isBusy}
           className="flex items-center justify-center gap-2 border border-gray-300 rounded-lg
             py-2.5 px-4 text-sm font-medium text-gray-700 hover:bg-gray-50
-            disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
+            disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
           {loadingGithub ? <Loader2 className="w-4 h-4 animate-spin" /> : <GithubIcon />}
           GitHub
         </button>
       </div>
 
-      {/* Divisor */}
       <div className="relative">
         <div className="absolute inset-0 flex items-center">
           <div className="w-full border-t border-gray-200" />
@@ -171,63 +127,39 @@ export function LoginForm() {
         </div>
       </div>
 
-      {/* Formulário */}
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
         <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-            E-mail
-          </label>
-          <input
-            id="email"
-            type="email"
-            autoComplete="email"
-            placeholder="seu@email.com"
+          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
+          <input id="email" type="email" autoComplete="email" placeholder="seu@email.com"
             className={`w-full px-3 py-2.5 border rounded-lg text-sm outline-none transition-colors
               focus:ring-2 focus:ring-blue-500 focus:border-blue-500
               ${errors.email ? "border-red-400 bg-red-50" : "border-gray-300 bg-white"}`}
-            {...register("email")}
-          />
-          {errors.email && (
-            <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>
-          )}
+            {...register("email")} />
+          {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>}
         </div>
 
         <div>
-          <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-            Senha
-          </label>
+          <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">Senha</label>
           <div className="relative">
-            <input
-              id="password"
-              type={showPassword ? "text" : "password"}
-              autoComplete="current-password"
-              placeholder="Sua senha"
+            <input id="password" type={showPassword ? "text" : "password"}
+              autoComplete="current-password" placeholder="Sua senha"
               className={`w-full px-3 py-2.5 pr-10 border rounded-lg text-sm outline-none transition-colors
                 focus:ring-2 focus:ring-blue-500 focus:border-blue-500
                 ${errors.password ? "border-red-400 bg-red-50" : "border-gray-300 bg-white"}`}
-              {...register("password")}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword((v) => !v)}
+              {...register("password")} />
+            <button type="button" onClick={() => setShowPassword(v => !v)}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
-            >
+              aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}>
               {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
           </div>
-          {errors.password && (
-            <p className="mt-1 text-xs text-red-500">{errors.password.message}</p>
-          )}
+          {errors.password && <p className="mt-1 text-xs text-red-500">{errors.password.message}</p>}
         </div>
 
-        <button
-          type="submit"
-          disabled={isBusy}
+        <button type="submit" disabled={isBusy}
           className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700
             disabled:bg-blue-400 disabled:cursor-not-allowed text-white font-medium py-2.5 px-4
-            rounded-lg transition-colors text-sm"
-        >
+            rounded-lg transition-colors text-sm">
           {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
           {isSubmitting ? "Entrando..." : "Entrar"}
         </button>
@@ -235,9 +167,7 @@ export function LoginForm() {
 
       <p className="text-center text-sm text-gray-500">
         Não tem uma conta?{" "}
-        <Link href="/register" className="text-blue-600 hover:text-blue-700 font-medium">
-          Cadastre-se
-        </Link>
+        <Link href="/register" className="text-blue-600 hover:text-blue-700 font-medium">Cadastre-se</Link>
       </p>
     </div>
   );
