@@ -1,15 +1,21 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { Toaster } from "react-hot-toast";
-import { AuthProvider } from "@/contexts/AuthContext";
 
-export default function ClientProviders({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+// Carrega o AuthProvider (que importa Firebase) apenas no cliente.
+// ssr: false dentro de um Client Component é permitido no Next.js 15.
+const AuthProviderDynamic = dynamic(
+  () => import("@/contexts/AuthContext").then((m) => ({ default: m.AuthProvider })),
+  {
+    ssr: false,
+    loading: () => null,
+  }
+);
+
+export function ClientProviders({ children }: { children: React.ReactNode }) {
   return (
-    <AuthProvider>
+    <AuthProviderDynamic>
       {children}
       <Toaster
         position="top-right"
@@ -27,6 +33,6 @@ export default function ClientProviders({
           },
         }}
       />
-    </AuthProvider>
+    </AuthProviderDynamic>
   );
 }
