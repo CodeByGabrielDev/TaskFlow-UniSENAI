@@ -1,9 +1,7 @@
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  signInWithRedirect,
   signInWithPopup,
-  getRedirectResult,
   signOut,
   sendEmailVerification,
   updateProfile,
@@ -22,59 +20,35 @@ export async function registerWithEmail(
   email: string,
   password: string
 ): Promise<User> {
-  const credential = await createUserWithEmailAndPassword(
-    auth,
-    email,
-    password
-  );
-
+  const credential = await createUserWithEmailAndPassword(auth, email, password);
   await updateProfile(credential.user, { displayName: name });
   await sendEmailVerification(credential.user);
-
   return credential.user;
 }
 
 // ─── Login por e-mail ─────────────────────────────────────────────────────────
 
-export async function loginWithEmail(
-  email: string,
-  password: string
-): Promise<User> {
+export async function loginWithEmail(email: string, password: string): Promise<User> {
   const credential = await signInWithEmailAndPassword(auth, email, password);
-
   if (!credential.user.emailVerified) {
     await signOut(auth);
     throw new Error(
       "E-mail não verificado. Verifique sua caixa de entrada e clique no link de confirmação antes de fazer login."
     );
   }
-
   return credential.user;
 }
 
-// ─── Login Social (Redirect) ──────────────────────────────────────────────────
-// Usamos signInWithRedirect em vez de signInWithPopup para maior compatibilidade
-// em produção (evita bloqueio de popup por domínio não autorizado).
+// ─── Login Social (Popup) ─────────────────────────────────────────────────────
 
-export async function loginWithGoogle(): Promise<void> {
-  await signInWithRedirect(auth, googleProvider);
+export async function loginWithGoogle(): Promise<User> {
+  const result = await signInWithPopup(auth, googleProvider);
+  return result.user;
 }
 
-export async function loginWithGithub(): Promise<void> {
-  await signInWithRedirect(auth, githubProvider);
-}
-
-/**
- * Deve ser chamada no carregamento de cada página para capturar o resultado
- * do redirect de login social. Retorna o usuário autenticado ou null.
- */
-export async function getLoginRedirectResult(): Promise<User | null> {
-  try {
-    const result = await getRedirectResult(auth);
-    return result?.user ?? null;
-  } catch {
-    return null;
-  }
+export async function loginWithGithub(): Promise<User> {
+  const result = await signInWithPopup(auth, githubProvider);
+  return result.user;
 }
 
 // ─── Logout ───────────────────────────────────────────────────────────────────
@@ -96,11 +70,10 @@ export async function resendVerificationEmail(): Promise<void> {
 export async function deleteCurrentAccount(): Promise<void> {
   const user = auth.currentUser;
   if (!user) throw new Error("Nenhum usuário autenticado.");
-
   try {
     await deleteUser(user);
   } catch (error: unknown) {
-    const firebaseError = error as { code?: string; message?: string };
+    const firebaseError = error as { code?: string };
     if (firebaseError.code === "auth/requires-recent-login") {
       throw new ReauthRequiredError();
     }
@@ -108,12 +81,9 @@ export async function deleteCurrentAccount(): Promise<void> {
   }
 }
 
-export async function reauthAndDeleteWithPassword(
-  password: string
-): Promise<void> {
+export async function reauthAndDeleteWithPassword(password: string): Promise<void> {
   const user = auth.currentUser;
   if (!user || !user.email) throw new Error("Nenhum usuário autenticado.");
-
   const credential = EmailAuthProvider.credential(user.email, password);
   await reauthenticateWithCredential(user, credential);
   await deleteUser(user);
@@ -138,13 +108,11 @@ export async function reauthAndDeleteWithGithub(): Promise<void> {
 export class ReauthRequiredError extends Error {
   public readonly code = "requires-reauth";
   constructor() {
-    super(
-      "Por segurança, você precisa fazer login novamente antes de excluir sua conta."
-    );
+    super("Por segurança, você precisa fazer login novamente antes de excluir sua conta.");
   }
 }
 
-// ─── Helpers de mensagens Firebase ───────────────────────────────────────────
+// ─── Mensagens de erro Firebase ───────────────────────────────────────────────
 
 export function getFirebaseErrorMessage(code: string): string {
   const messages: Record<string, string> = {
@@ -154,19 +122,14 @@ export function getFirebaseErrorMessage(code: string): string {
     "auth/user-not-found": "Usuário não encontrado.",
     "auth/wrong-password": "Senha incorreta.",
     "auth/invalid-credential": "Credenciais inválidas. Verifique e-mail e senha.",
-    "auth/too-many-requests":
-      "Muitas tentativas. Aguarde alguns minutos e tente novamente.",
-    "auth/network-request-failed":
-      "Falha de rede. Verifique sua conexão com a internet.",
+    "auth/too-many-requests": "Muitas tentativas. Aguarde alguns minutos e tente novamente.",
+    "auth/network-request-failed": "Falha de rede. Verifique sua conexão com a internet.",
     "auth/popup-closed-by-user": "Login cancelado.",
     "auth/cancelled-popup-request": "Login cancelado.",
-    "auth/account-exists-with-different-credential":
-      "Este e-mail já está associado a outro método de login.",
-    "auth/requires-recent-login":
-      "Por segurança, faça login novamente antes desta operação.",
-    "auth/unauthorized-domain":
-      "Domínio não autorizado. Contate o suporte.",
+    "auth/popup-blocked": "Popup bloqueado pelo navegador. Permita popups para este site.",
+    "auth/account-exists-with-different-credential": "Este e-mail já está associado a outro método de login.",
+    "auth/requires-recent-login": "Por segurança, faça login novamente antes desta operação.",
+    "auth/unauthorized-domain": "Domínio não autorizado no Firebase.",
   };
-
   return messages[code] ?? "Ocorreu um erro inesperado. Tente novamente.";
 }
