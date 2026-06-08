@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { CheckSquare } from "lucide-react";
-import { LoginForm } from "@/components/LoginForm";
 import { Suspense } from "react";
+import { LoginForm } from "@/components/LoginForm";
 
 export const metadata: Metadata = {
   title: "Login",
@@ -25,10 +25,6 @@ export default function LoginPage() {
         {/* Card */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
           <h1 className="text-xl font-semibold text-gray-900 mb-6">Entrar na conta</h1>
-          {/*
-            LoginForm usa useSearchParams → precisa de Suspense
-            conforme requisito do Next.js 15
-          */}
           <Suspense>
             <LoginForm />
           </Suspense>

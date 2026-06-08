@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -13,6 +13,7 @@ import {
   loginWithEmail,
   loginWithGoogle,
   loginWithGithub,
+  getLoginRedirectResult,
   getFirebaseErrorMessage,
 } from "@/services/auth.service";
 
@@ -37,13 +38,13 @@ function GithubIcon() {
   );
 }
 
-// ─── Helper cookie ────────────────────────────────────────────────────────────
+// ─── Cookie helper ────────────────────────────────────────────────────────────
 
 function setSessionCookie() {
   document.cookie = "taskflow_session=1; path=/; SameSite=Lax";
 }
 
-// ─── Componente principal ─────────────────────────────────────────────────────
+// ─── Componente ───────────────────────────────────────────────────────────────
 
 export function LoginForm() {
   const router = useRouter();
@@ -53,6 +54,26 @@ export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [loadingGoogle, setLoadingGoogle] = useState(false);
   const [loadingGithub, setLoadingGithub] = useState(false);
+  const [checkingRedirect, setCheckingRedirect] = useState(true);
+
+  // ── Captura resultado do signInWithRedirect ao voltar do provedor ──────────
+  useEffect(() => {
+    getLoginRedirectResult()
+      .then((user) => {
+        if (user) {
+          setSessionCookie();
+          toast.success("Login realizado com sucesso!");
+          router.replace(redirectTo);
+        }
+      })
+      .catch((error: unknown) => {
+        const err = error as { code?: string };
+        toast.error(getFirebaseErrorMessage(err.code ?? ""));
+      })
+      .finally(() => {
+        setCheckingRedirect(false);
+      });
+  }, [redirectTo, router]);
 
   const {
     register,
@@ -62,16 +83,12 @@ export function LoginForm() {
     resolver: zodResolver(loginSchema),
   });
 
-  const handleSuccess = (message: string) => {
-    toast.success(message);
-    setSessionCookie();
-    router.replace(redirectTo);
-  };
-
   const onSubmit = async (data: LoginSchema) => {
     try {
       await loginWithEmail(data.email, data.password);
-      handleSuccess("Login realizado com sucesso!");
+      setSessionCookie();
+      toast.success("Login realizado com sucesso!");
+      router.replace(redirectTo);
     } catch (error: unknown) {
       const err = error as { code?: string; message?: string };
       const msg =
@@ -82,12 +99,10 @@ export function LoginForm() {
     }
   };
 
-  // Com signInWithRedirect, o clique apenas inicia o redirecionamento.
-  // O resultado é capturado pelo AuthContext via getRedirectResult ao voltar.
   const handleGoogle = async () => {
     setLoadingGoogle(true);
     try {
-      await loginWithGoogle(); // redireciona a página
+      await loginWithGoogle(); // redireciona para accounts.google.com
     } catch (error: unknown) {
       const err = error as { code?: string };
       toast.error(getFirebaseErrorMessage(err.code ?? ""));
@@ -98,13 +113,22 @@ export function LoginForm() {
   const handleGithub = async () => {
     setLoadingGithub(true);
     try {
-      await loginWithGithub(); // redireciona a página
+      await loginWithGithub(); // redireciona para github.com
     } catch (error: unknown) {
       const err = error as { code?: string };
       toast.error(getFirebaseErrorMessage(err.code ?? ""));
       setLoadingGithub(false);
     }
   };
+
+  // Enquanto verifica o redirect result, mostra loading sutil
+  if (checkingRedirect) {
+    return (
+      <div className="flex justify-center py-8">
+        <Loader2 className="w-6 h-6 text-blue-600 animate-spin" />
+      </div>
+    );
+  }
 
   const isBusy = isSubmitting || loadingGoogle || loadingGithub;
 
@@ -147,7 +171,7 @@ export function LoginForm() {
         </div>
       </div>
 
-      {/* Formulário e-mail/senha */}
+      {/* Formulário */}
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
