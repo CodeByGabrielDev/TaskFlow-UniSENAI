@@ -7,8 +7,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import toast from "react-hot-toast";
 import { Eye, EyeOff, Loader2, LogIn } from "lucide-react";
-import Cookies from "js-cookie"; // será resolvido via workaround abaixo
-
 import { loginSchema, LoginSchema } from "@/lib/validations";
 import {
   loginWithEmail,
