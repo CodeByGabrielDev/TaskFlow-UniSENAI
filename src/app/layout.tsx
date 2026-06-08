@@ -1,10 +1,16 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import { Toaster } from "react-hot-toast";
-import { AuthProvider } from "@/contexts/AuthContext";
+import dynamic from "next/dynamic";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
+
+// Carrega o AuthProvider apenas no cliente — evita que o Firebase
+// seja inicializado durante o pre-render estático do servidor.
+const ClientProviders = dynamic(
+  () => import("@/components/ClientProviders"),
+  { ssr: false }
+);
 
 export const metadata: Metadata = {
   title: {
@@ -22,25 +28,9 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body className={inter.className}>
-        <AuthProvider>
+        <ClientProviders>
           {children}
-          <Toaster
-            position="top-right"
-            toastOptions={{
-              duration: 4000,
-              style: {
-                borderRadius: "10px",
-                fontSize: "14px",
-              },
-              success: {
-                iconTheme: { primary: "#22c55e", secondary: "#fff" },
-              },
-              error: {
-                iconTheme: { primary: "#ef4444", secondary: "#fff" },
-              },
-            }}
-          />
-        </AuthProvider>
+        </ClientProviders>
       </body>
     </html>
   );
