@@ -1,5 +1,5 @@
 "use client";
-
+//teste
 export const dynamic = "force-dynamic";
 
 import lazyLoad from "next/dynamic";
