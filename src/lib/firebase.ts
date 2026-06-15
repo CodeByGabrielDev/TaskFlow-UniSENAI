@@ -1,6 +1,6 @@
-import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, GithubAuthProvider, type Auth } from "firebase/auth";
-import { getFirestore, type Firestore } from "firebase/firestore";
+import { initializeApp, getApps, getApp } from "firebase/app";
+import { getAuth, GoogleAuthProvider, GithubAuthProvider } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -11,22 +11,10 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-let app: FirebaseApp;
-let auth: Auth;
-let db: Firestore;
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
-try {
-  app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-  auth = getAuth(app);
-  db = getFirestore(app);
-} catch {
-  // SSR or build without env vars — services will be initialized client-side
-  app = {} as FirebaseApp;
-  auth = {} as Auth;
-  db = {} as Firestore;
-}
-
-export { auth, db };
+export const auth = getAuth(app);
+export const db = getFirestore(app);
 
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: "select_account" });
