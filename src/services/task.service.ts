@@ -7,7 +7,6 @@ import {
   getDoc,
   query,
   where,
-  orderBy,
   onSnapshot,
   type Unsubscribe,
 } from "firebase/firestore";
@@ -35,16 +34,26 @@ export function subscribeTasks(
   callback: (tasks: Task[]) => void,
   onError?: (err: Error) => void
 ): Unsubscribe {
+  // Sem orderBy para evitar necessidade de índice composto no Firestore.
+  // A ordenação é feita no cliente.
   const q = query(
     collection(db, COLLECTION),
-    where("uid", "==", userUid),
-    orderBy("dueDate", "asc")
+    where("uid", "==", userUid)
   );
 
   return onSnapshot(
     q,
     (snapshot) => {
-      const tasks = snapshot.docs.map((d) => ({ id: d.id, ...d.data() })) as Task[];
+      const tasks = snapshot.docs
+        .map((d) => ({ id: d.id, ...d.data() })) as Task[];
+
+      // Ordena por dueDate no cliente
+      tasks.sort((a, b) => {
+        if (!a.dueDate) return 1;
+        if (!b.dueDate) return -1;
+        return a.dueDate.localeCompare(b.dueDate);
+      });
+
       callback(tasks);
     },
     (err) => onError?.(err)
