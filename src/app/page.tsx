@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import Link from "next/link";
 import { CheckSquare, Zap, Shield, Users } from "lucide-react";
 

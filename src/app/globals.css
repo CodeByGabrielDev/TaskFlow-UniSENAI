@@ -2,9 +2,85 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --app-bg: #f9fafb;
+  --app-surface: #ffffff;
+  --app-card: #ffffff;
+  --app-border: #e5e7eb;
+  --app-text: #111827;
+  --app-muted: #6b7280;
+  --app-accent: #0078D4;
+  --app-accent-hover: #106EBE;
+}
+
+.dark {
+  --app-bg: #0D1117;
+  --app-surface: #161B22;
+  --app-card: #1C2128;
+  --app-border: #30363D;
+  --app-text: #E6EDF3;
+  --app-muted: #8B949E;
+  --app-accent: #0078D4;
+  --app-accent-hover: #388bfd;
+}
+
+.high-contrast {
+  --app-bg: #000000;
+  --app-surface: #0a0a0a;
+  --app-card: #111111;
+  --app-border: #ffffff;
+  --app-text: #ffffff;
+  --app-muted: #ffff00;
+  --app-accent: #00d4ff;
+  --app-accent-hover: #00aacc;
+}
+
 @layer base {
   html {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+  body {
+    background-color: var(--app-bg);
+    color: var(--app-text);
+  }
+}
+
+/* FullCalendar theme overrides */
+.dark .fc {
+  --fc-border-color: var(--app-border);
+  --fc-page-bg-color: var(--app-surface);
+  --fc-neutral-bg-color: var(--app-card);
+  --fc-list-event-hover-bg-color: var(--app-card);
+  --fc-today-bg-color: rgba(0, 120, 212, 0.1);
+  color: var(--app-text);
+}
+
+.dark .fc-toolbar-title {
+  color: var(--app-text);
+}
+
+.dark .fc-button {
+  background-color: var(--app-card) !important;
+  border-color: var(--app-border) !important;
+  color: var(--app-text) !important;
+}
+
+.dark .fc-button:hover {
+  background-color: var(--app-accent) !important;
+}
+
+.dark .fc-button-primary:not(:disabled).fc-button-active {
+  background-color: var(--app-accent) !important;
+  border-color: var(--app-accent) !important;
+}
+
+.dark .fc-col-header-cell {
+  background-color: var(--app-surface);
+  color: var(--app-muted);
+}
+
+.dark .fc-daygrid-day-number,
+.dark .fc-timegrid-axis-cushion {
+  color: var(--app-text);
 }

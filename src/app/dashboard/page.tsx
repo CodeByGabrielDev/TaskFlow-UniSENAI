@@ -1,254 +1,256 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import toast from "react-hot-toast";
+export const dynamic = 'force-dynamic';
+
+import { useMemo } from "react";
+import { AlertCircle, CheckCircle2, Clock, RefreshCw } from "lucide-react";
 import {
-  CheckSquare,
-  LogOut,
-  User,
-  Mail,
-  ShieldCheck,
-  ShieldAlert,
-  RefreshCw,
-  Settings,
-} from "lucide-react";
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, Legend,
+} from "recharts";
+import { AppLayout } from "@/components/templates/AppLayout";
+import { useTasks } from "@/hooks/useTasks";
+import { Task, TASK_TYPE_COLORS, TASK_TYPE_LABELS, PRIORITY_COLORS, PRIORITY_LABELS, TaskType, Priority } from "@/types/task";
 
-import { useAuth } from "@/hooks/useAuth";
-import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { resendVerificationEmail } from "@/services/auth.service";
-import { useState } from "react";
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
-// ─── Badge de verificação ─────────────────────────────────────────────────────
+function getWeekKey(date: Date): string {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() - d.getDay());
+  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+}
 
-function VerificationBadge({ verified }: { verified: boolean }) {
-  if (verified) {
-    return (
-      <span className="inline-flex items-center gap-1.5 bg-green-100 text-green-700
-        text-xs font-medium px-2.5 py-1 rounded-full">
-        <ShieldCheck className="w-3.5 h-3.5" />
-        E-mail verificado
-      </span>
-    );
+function getLast8Weeks(): string[] {
+  const weeks: string[] = [];
+  const d = new Date();
+  d.setDate(d.getDate() - d.getDay());
+  for (let i = 7; i >= 0; i--) {
+    const w = new Date(d);
+    w.setDate(d.getDate() - i * 7);
+    weeks.push(w.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }));
   }
+  return weeks;
+}
+
+// ─── Metric Card ─────────────────────────────────────────────────────────────
+
+interface MetricCardProps {
+  label: string;
+  value: number | string;
+  icon: React.ReactNode;
+  color: string;
+  loading?: boolean;
+}
+
+function MetricCard({ label, value, icon, color, loading }: MetricCardProps) {
   return (
-    <span className="inline-flex items-center gap-1.5 bg-yellow-100 text-yellow-700
-      text-xs font-medium px-2.5 py-1 rounded-full">
-      <ShieldAlert className="w-3.5 h-3.5" />
-      E-mail não verificado
-    </span>
+    <div className="bg-app-card border border-app-border rounded-2xl p-5">
+      <div className="flex items-start justify-between mb-3">
+        <p className="text-xs font-medium text-app-muted uppercase tracking-wide">{label}</p>
+        <div className="p-2 rounded-lg" style={{ backgroundColor: `${color}22` }}>
+          <div style={{ color }}>{icon}</div>
+        </div>
+      </div>
+      {loading ? (
+        <div className="h-8 w-16 bg-app-border rounded animate-pulse" />
+      ) : (
+        <p className="text-3xl font-bold text-app-text">{value}</p>
+      )}
+    </div>
   );
 }
 
-// ─── Página do Dashboard ──────────────────────────────────────────────────────
+// ─── Custom Tooltip ───────────────────────────────────────────────────────────
+
+function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: { value: number }[]; label?: string }) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="bg-app-surface border border-app-border rounded-lg px-3 py-2 text-xs shadow-lg">
+      <p className="text-app-muted mb-0.5">{label}</p>
+      <p className="text-app-text font-semibold">{payload[0].value} tarefa(s)</p>
+    </div>
+  );
+}
+
+// ─── Dashboard Content ────────────────────────────────────────────────────────
 
 function DashboardContent() {
-  const { user, logout, refreshUser } = useAuth();
-  const router = useRouter();
-  const [resending, setResending] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
+  const { tasks, loading, error, reload } = useTasks();
 
-  const handleLogout = async () => {
-    document.cookie = "taskflow_session=; path=/; max-age=0";
-    await logout();
-    toast.success("Você saiu da conta.");
-    router.replace("/login");
-  };
+  const metrics = useMemo(() => {
+    const now = new Date();
+    const todayStr = now.toISOString().split("T")[0];
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-  const handleResendEmail = async () => {
-    setResending(true);
-    try {
-      await resendVerificationEmail();
-      toast.success("E-mail de verificação reenviado! Verifique sua caixa de entrada.");
-    } catch {
-      toast.error("Não foi possível reenviar o e-mail. Tente novamente.");
-    } finally {
-      setResending(false);
-    }
-  };
+    const active = tasks.filter((t) => t.status === "a_fazer" || t.status === "fazendo").length;
 
-  const handleRefreshStatus = async () => {
-    setRefreshing(true);
-    try {
-      await refreshUser();
-      toast.success("Status atualizado.");
-    } catch {
-      toast.error("Não foi possível atualizar o status.");
-    } finally {
-      setRefreshing(false);
-    }
-  };
+    const completedRecent = tasks.filter((t) => {
+      if (t.status !== "concluido" || !t.completedAt) return false;
+      return new Date(t.completedAt) >= sevenDaysAgo;
+    }).length;
 
-  const initials = user?.displayName
-    ? user.displayName
-        .split(" ")
-        .slice(0, 2)
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase()
-    : user?.email?.[0]?.toUpperCase() ?? "?";
+    const overdue = tasks.filter(
+      (t) => t.status !== "concluido" && t.dueDate < todayStr
+    ).length;
+
+    return { active, completedRecent, overdue };
+  }, [tasks]);
+
+  const weeklyChart = useMemo(() => {
+    const weeks = getLast8Weeks();
+    const counts: Record<string, number> = {};
+    weeks.forEach((w) => (counts[w] = 0));
+
+    tasks.forEach((t: Task) => {
+      if (t.status === "concluido" && t.completedAt) {
+        const key = getWeekKey(new Date(t.completedAt));
+        if (key in counts) counts[key]++;
+      }
+    });
+
+    return weeks.map((w) => ({ semana: w, concluídas: counts[w] }));
+  }, [tasks]);
+
+  const priorityChart = useMemo(() => {
+    const counts: Record<string, number> = { baixa: 0, media: 0, alta: 0 };
+    tasks.forEach((t) => { counts[t.priority]++; });
+    return (Object.entries(counts) as [Priority, number][])
+      .filter(([, v]) => v > 0)
+      .map(([k, v]) => ({ name: PRIORITY_LABELS[k], value: v, color: PRIORITY_COLORS[k] }));
+  }, [tasks]);
+
+  const typeChart = useMemo(() => {
+    const counts: Partial<Record<TaskType, number>> = {};
+    tasks.forEach((t) => {
+      counts[t.taskType] = (counts[t.taskType] ?? 0) + 1;
+    });
+    return (Object.entries(counts) as [TaskType, number][])
+      .filter(([, v]) => v > 0)
+      .map(([k, v]) => ({ name: TASK_TYPE_LABELS[k], value: v, color: TASK_TYPE_COLORS[k] }));
+  }, [tasks]);
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 gap-4">
+        <p className="text-app-muted">{error}</p>
+        <button
+          onClick={reload}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-app-accent hover:bg-app-accent-hover text-white text-sm transition-colors"
+        >
+          <RefreshCw className="w-4 h-4" />
+          Tentar novamente
+        </button>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <CheckSquare className="w-6 h-6 text-blue-600" />
-            <span className="font-bold text-gray-900">TaskFlow</span>
-          </Link>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-xl font-bold text-app-text">Dashboard</h1>
+        <p className="text-sm text-app-muted mt-0.5">Visão geral das suas tarefas</p>
+      </div>
 
-          <div className="flex items-center gap-3">
-            <Link
-              href="/profile"
-              className="flex items-center gap-1.5 text-sm text-gray-600
-                hover:text-gray-900 transition-colors"
-            >
-              <Settings className="w-4 h-4" />
-              <span className="hidden sm:inline">Perfil</span>
-            </Link>
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-1.5 text-sm text-gray-600
-                hover:text-red-600 transition-colors"
-            >
-              <LogOut className="w-4 h-4" />
-              <span className="hidden sm:inline">Sair</span>
-            </button>
-          </div>
-        </div>
-      </header>
+      {/* Metric cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <MetricCard
+          label="Em aberto"
+          value={metrics.active}
+          icon={<Clock className="w-4 h-4" />}
+          color="#0078D4"
+          loading={loading}
+        />
+        <MetricCard
+          label="Concluídas (7 dias)"
+          value={metrics.completedRecent}
+          icon={<CheckCircle2 className="w-4 h-4" />}
+          color="#22c55e"
+          loading={loading}
+        />
+        <MetricCard
+          label="Atrasadas"
+          value={metrics.overdue}
+          icon={<AlertCircle className="w-4 h-4" />}
+          color="#ef4444"
+          loading={loading}
+        />
+      </div>
 
-      {/* Main */}
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-6">
-        {/* Boas-vindas */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-          <div className="flex items-center gap-4">
-            {/* Avatar */}
-            <div className="w-14 h-14 bg-blue-600 rounded-full flex items-center justify-center
-              text-white text-xl font-bold shrink-0">
-              {initials}
-            </div>
-            <div>
-              <h1 className="text-xl font-semibold text-gray-900">
-                Olá, {user?.displayName ?? "usuário"}!
-              </h1>
-              <p className="text-sm text-gray-500">
-                Bem-vindo ao seu dashboard.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Informações do usuário */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
-          <h2 className="font-semibold text-gray-900">Informações da conta</h2>
-
-          <div className="divide-y divide-gray-100">
-            {/* Nome */}
-            <div className="flex items-center gap-3 py-3">
-              <User className="w-4 h-4 text-gray-400 shrink-0" />
-              <div>
-                <p className="text-xs text-gray-400 mb-0.5">Nome</p>
-                <p className="text-sm font-medium text-gray-700">
-                  {user?.displayName ?? "—"}
-                </p>
-              </div>
-            </div>
-
-            {/* E-mail */}
-            <div className="flex items-center gap-3 py-3">
-              <Mail className="w-4 h-4 text-gray-400 shrink-0" />
-              <div>
-                <p className="text-xs text-gray-400 mb-0.5">E-mail</p>
-                <p className="text-sm font-medium text-gray-700">
-                  {user?.email ?? "—"}
-                </p>
-              </div>
-            </div>
-
-            {/* Status do e-mail */}
-            <div className="flex items-center justify-between py-3 gap-3 flex-wrap">
-              <div className="flex items-center gap-3">
-                <ShieldCheck className="w-4 h-4 text-gray-400 shrink-0" />
-                <div>
-                  <p className="text-xs text-gray-400 mb-0.5">Status do e-mail</p>
-                  <VerificationBadge verified={user?.emailVerified ?? false} />
-                </div>
-              </div>
-
-              {/* Ações de verificação */}
-              <div className="flex items-center gap-2 flex-wrap">
-                <button
-                  onClick={handleRefreshStatus}
-                  disabled={refreshing}
-                  className="flex items-center gap-1.5 text-xs text-gray-500
-                    hover:text-gray-700 transition-colors disabled:opacity-50"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
-                  Atualizar status
-                </button>
-                {!user?.emailVerified && (
-                  <button
-                    onClick={handleResendEmail}
-                    disabled={resending}
-                    className="text-xs text-blue-600 hover:text-blue-700
-                      transition-colors disabled:opacity-50"
-                  >
-                    {resending ? "Enviando..." : "Reenviar verificação"}
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
+      {/* Charts row 1 */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Weekly bar chart */}
+        <div className="bg-app-card border border-app-border rounded-2xl p-5">
+          <h2 className="text-sm font-semibold text-app-text mb-4">Concluídas por semana (últimas 8)</h2>
+          {loading ? (
+            <div className="h-48 bg-app-border rounded animate-pulse" />
+          ) : (
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={weeklyChart} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
+                <XAxis dataKey="semana" tick={{ fontSize: 10, fill: "var(--app-muted)" }} tickLine={false} axisLine={false} />
+                <YAxis tick={{ fontSize: 10, fill: "var(--app-muted)" }} tickLine={false} axisLine={false} allowDecimals={false} />
+                <Tooltip content={<CustomTooltip />} cursor={{ fill: "var(--app-border)" }} />
+                <Bar dataKey="concluídas" fill="#0078D4" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </div>
 
-        {/* Aviso e-mail não verificado */}
-        {!user?.emailVerified && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-4 flex
-            items-start gap-3 text-sm text-yellow-800">
-            <ShieldAlert className="w-5 h-5 shrink-0 mt-0.5" />
-            <div>
-              <p className="font-medium">E-mail não verificado</p>
-              <p className="text-yellow-700 mt-0.5">
-                Verifique sua caixa de entrada e clique no link que enviamos para
-                ativar todas as funcionalidades da sua conta.
-              </p>
+        {/* Priority pie chart */}
+        <div className="bg-app-card border border-app-border rounded-2xl p-5">
+          <h2 className="text-sm font-semibold text-app-text mb-4">Distribuição por prioridade</h2>
+          {loading ? (
+            <div className="h-48 bg-app-border rounded animate-pulse" />
+          ) : priorityChart.length === 0 ? (
+            <div className="h-48 flex items-center justify-center text-app-muted text-sm">
+              Nenhuma tarefa encontrada
             </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={200}>
+              <PieChart>
+                <Pie data={priorityChart} dataKey="value" cx="50%" cy="50%" outerRadius={70} label={false} labelLine={false} style={{ fontSize: 10 }}>
+                  {priorityChart.map((entry, i) => (
+                    <Cell key={i} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(v) => [`${v} tarefa(s)`, ""]} contentStyle={{ backgroundColor: "var(--app-surface)", border: "1px solid var(--app-border)", borderRadius: 8, fontSize: 12 }} />
+              </PieChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+      </div>
+
+      {/* Type chart */}
+      <div className="bg-app-card border border-app-border rounded-2xl p-5">
+        <h2 className="text-sm font-semibold text-app-text mb-4">Distribuição por tipo</h2>
+        {loading ? (
+          <div className="h-48 bg-app-border rounded animate-pulse" />
+        ) : typeChart.length === 0 ? (
+          <div className="h-48 flex items-center justify-center text-app-muted text-sm">
+            Nenhuma tarefa encontrada
           </div>
+        ) : (
+          <ResponsiveContainer width="100%" height={200}>
+            <PieChart>
+              <Pie data={typeChart} dataKey="value" cx="50%" cy="50%" innerRadius={45} outerRadius={75}>
+                {typeChart.map((entry, i) => (
+                  <Cell key={i} fill={entry.color} />
+                ))}
+              </Pie>
+              <Legend iconType="circle" iconSize={8} formatter={(v) => <span style={{ fontSize: 11, color: "var(--app-text)" }}>{v}</span>} />
+              <Tooltip formatter={(v) => [`${v} tarefa(s)`, ""]} contentStyle={{ backgroundColor: "var(--app-surface)", border: "1px solid var(--app-border)", borderRadius: 8, fontSize: 12 }} />
+            </PieChart>
+          </ResponsiveContainer>
         )}
-
-        {/* Ações rápidas */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
-          <h2 className="font-semibold text-gray-900">Ações rápidas</h2>
-          <div className="flex flex-wrap gap-3">
-            <Link
-              href="/profile"
-              className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200
-                text-gray-700 text-sm font-medium px-4 py-2.5 rounded-lg transition-colors"
-            >
-              <Settings className="w-4 h-4" />
-              Gerenciar perfil
-            </Link>
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 bg-red-50 hover:bg-red-100
-                text-red-600 text-sm font-medium px-4 py-2.5 rounded-lg transition-colors"
-            >
-              <LogOut className="w-4 h-4" />
-              Sair da conta
-            </button>
-          </div>
-        </div>
-      </main>
+      </div>
     </div>
   );
 }
 
 export default function DashboardPage() {
   return (
-    <ProtectedRoute>
+    <AppLayout>
       <DashboardContent />
-    </ProtectedRoute>
+    </AppLayout>
   );
 }
