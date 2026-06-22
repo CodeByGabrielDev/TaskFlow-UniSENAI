@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const FIRESTORE_BASE = `https://firestore.googleapis.com/v1/projects/${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}/databases/(default)/documents`;
-/**/ 
+/* teste*/ 
 function extractIdToken(req: NextRequest): string | null {
   const auth = req.headers.get("authorization");
   if (!auth?.startsWith("Bearer ")) return null;
