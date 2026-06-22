@@ -5,12 +5,20 @@ export const dynamic = 'force-dynamic';
 import { useMemo } from "react";
 import { AlertCircle, CheckCircle2, Clock, RefreshCw } from "lucide-react";
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend,
-} from "recharts";
+  BarChart,
+  DonutChart,
+  Card,
+  Metric,
+  Text,
+  Title,
+  Legend,
+  BadgeDelta,
+  Flex,
+  Grid,
+} from "@tremor/react";
 import { AppLayout } from "@/components/templates/AppLayout";
 import { useTasks } from "@/hooks/useTasks";
-import { Task, TASK_TYPE_COLORS, TASK_TYPE_LABELS, PRIORITY_COLORS, PRIORITY_LABELS, TaskType, Priority } from "@/types/task";
+import { Task, TaskType, Priority } from "@/types/task";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -33,45 +41,33 @@ function getLast8Weeks(): string[] {
   return weeks;
 }
 
-// ─── Metric Card ─────────────────────────────────────────────────────────────
+const PRIORITY_TREMOR_COLORS: Record<Priority, string> = {
+  alta:  "red",
+  media: "amber",
+  baixa: "green",
+};
 
-interface MetricCardProps {
-  label: string;
-  value: number | string;
-  icon: React.ReactNode;
-  color: string;
-  loading?: boolean;
-}
+const PRIORITY_LABELS: Record<Priority, string> = {
+  alta: "Alta",
+  media: "Média",
+  baixa: "Baixa",
+};
 
-function MetricCard({ label, value, icon, color, loading }: MetricCardProps) {
-  return (
-    <div className="bg-app-card border border-app-border rounded-2xl p-5">
-      <div className="flex items-start justify-between mb-3">
-        <p className="text-xs font-medium text-app-muted uppercase tracking-wide">{label}</p>
-        <div className="p-2 rounded-lg" style={{ backgroundColor: `${color}22` }}>
-          <div style={{ color }}>{icon}</div>
-        </div>
-      </div>
-      {loading ? (
-        <div className="h-8 w-16 bg-app-border rounded animate-pulse" />
-      ) : (
-        <p className="text-3xl font-bold text-app-text">{value}</p>
-      )}
-    </div>
-  );
-}
+const TYPE_TREMOR_COLORS: Record<TaskType, string> = {
+  feature:    "blue",
+  user_story: "violet",
+  bug:        "red",
+  melhoria:   "amber",
+  tarefa:     "slate",
+};
 
-// ─── Custom Tooltip ───────────────────────────────────────────────────────────
-
-function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: { value: number }[]; label?: string }) {
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="bg-app-surface border border-app-border rounded-lg px-3 py-2 text-xs shadow-lg">
-      <p className="text-app-muted mb-0.5">{label}</p>
-      <p className="text-app-text font-semibold">{payload[0].value} tarefa(s)</p>
-    </div>
-  );
-}
+const TYPE_LABELS: Record<TaskType, string> = {
+  feature:    "Feature",
+  user_story: "User Story",
+  bug:        "Bug",
+  melhoria:   "Melhoria",
+  tarefa:     "Tarefa",
+};
 
 // ─── Dashboard Content ────────────────────────────────────────────────────────
 
@@ -83,7 +79,9 @@ function DashboardContent() {
     const todayStr = now.toISOString().split("T")[0];
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-    const active = tasks.filter((t) => t.status === "a_fazer" || t.status === "fazendo").length;
+    const active = tasks.filter(
+      (t) => t.status === "a_fazer" || t.status === "fazendo"
+    ).length;
 
     const completedRecent = tasks.filter((t) => {
       if (t.status !== "concluido" || !t.completedAt) return false;
@@ -97,6 +95,7 @@ function DashboardContent() {
     return { active, completedRecent, overdue };
   }, [tasks]);
 
+  // ── Weekly bar chart data ──────────────────────────────────────────────────
   const weeklyChart = useMemo(() => {
     const weeks = getLast8Weeks();
     const counts: Record<string, number> = {};
@@ -109,17 +108,23 @@ function DashboardContent() {
       }
     });
 
-    return weeks.map((w) => ({ semana: w, concluídas: counts[w] }));
+    return weeks.map((w) => ({ Semana: w, "Concluídas": counts[w] }));
   }, [tasks]);
 
+  // ── Priority donut chart data ──────────────────────────────────────────────
   const priorityChart = useMemo(() => {
-    const counts: Record<string, number> = { baixa: 0, media: 0, alta: 0 };
+    const counts: Record<Priority, number> = { baixa: 0, media: 0, alta: 0 };
     tasks.forEach((t) => { counts[t.priority]++; });
     return (Object.entries(counts) as [Priority, number][])
       .filter(([, v]) => v > 0)
-      .map(([k, v]) => ({ name: PRIORITY_LABELS[k], value: v, color: PRIORITY_COLORS[k] }));
+      .map(([k, v]) => ({
+        prioridade: PRIORITY_LABELS[k],
+        tarefas: v,
+        color: PRIORITY_TREMOR_COLORS[k],
+      }));
   }, [tasks]);
 
+  // ── Task type donut chart data ─────────────────────────────────────────────
   const typeChart = useMemo(() => {
     const counts: Partial<Record<TaskType, number>> = {};
     tasks.forEach((t) => {
@@ -127,8 +132,15 @@ function DashboardContent() {
     });
     return (Object.entries(counts) as [TaskType, number][])
       .filter(([, v]) => v > 0)
-      .map(([k, v]) => ({ name: TASK_TYPE_LABELS[k], value: v, color: TASK_TYPE_COLORS[k] }));
+      .map(([k, v]) => ({
+        tipo: TYPE_LABELS[k],
+        tarefas: v,
+        color: TYPE_TREMOR_COLORS[k],
+      }));
   }, [tasks]);
+
+  const priorityColors = priorityChart.map((d) => d.color);
+  const typeColors     = typeChart.map((d) => d.color);
 
   if (error) {
     return (
@@ -152,97 +164,148 @@ function DashboardContent() {
         <p className="text-sm text-app-muted mt-0.5">Visão geral das suas tarefas</p>
       </div>
 
-      {/* Metric cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <MetricCard
-          label="Em aberto"
-          value={metrics.active}
-          icon={<Clock className="w-4 h-4" />}
-          color="#0078D4"
-          loading={loading}
-        />
-        <MetricCard
-          label="Concluídas (7 dias)"
-          value={metrics.completedRecent}
-          icon={<CheckCircle2 className="w-4 h-4" />}
-          color="#22c55e"
-          loading={loading}
-        />
-        <MetricCard
-          label="Atrasadas"
-          value={metrics.overdue}
-          icon={<AlertCircle className="w-4 h-4" />}
-          color="#ef4444"
-          loading={loading}
-        />
-      </div>
+      {/* ── Metric Cards (Tremor) ──────────────────────────────────────────── */}
+      <Grid numItemsSm={3} className="gap-4">
+        {/* Em aberto */}
+        <Card decoration="top" decorationColor="blue">
+          <Flex justifyContent="between" alignItems="center">
+            <div>
+              <Text>Em aberto</Text>
+              {loading ? (
+                <div className="h-8 w-16 bg-gray-200 rounded animate-pulse mt-1" />
+              ) : (
+                <Metric>{metrics.active}</Metric>
+              )}
+            </div>
+            <BadgeDelta
+              deltaType="unchanged"
+              className="bg-blue-50 text-blue-600"
+            >
+              <Clock className="w-4 h-4" />
+            </BadgeDelta>
+          </Flex>
+        </Card>
 
-      {/* Charts row 1 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Weekly bar chart */}
-        <div className="bg-app-card border border-app-border rounded-2xl p-5">
-          <h2 className="text-sm font-semibold text-app-text mb-4">Concluídas por semana (últimas 8)</h2>
+        {/* Concluídas na semana */}
+        <Card decoration="top" decorationColor="green">
+          <Flex justifyContent="between" alignItems="center">
+            <div>
+              <Text>Concluídas (7 dias)</Text>
+              {loading ? (
+                <div className="h-8 w-16 bg-gray-200 rounded animate-pulse mt-1" />
+              ) : (
+                <Metric>{metrics.completedRecent}</Metric>
+              )}
+            </div>
+            <BadgeDelta
+              deltaType="increase"
+              className="bg-green-50 text-green-600"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+            </BadgeDelta>
+          </Flex>
+        </Card>
+
+        {/* Atrasadas */}
+        <Card decoration="top" decorationColor="red">
+          <Flex justifyContent="between" alignItems="center">
+            <div>
+              <Text>Atrasadas</Text>
+              {loading ? (
+                <div className="h-8 w-16 bg-gray-200 rounded animate-pulse mt-1" />
+              ) : (
+                <Metric>{metrics.overdue}</Metric>
+              )}
+            </div>
+            <BadgeDelta
+              deltaType={metrics.overdue > 0 ? "increase" : "unchanged"}
+              className="bg-red-50 text-red-600"
+            >
+              <AlertCircle className="w-4 h-4" />
+            </BadgeDelta>
+          </Flex>
+        </Card>
+      </Grid>
+
+      {/* ── Charts Row ────────────────────────────────────────────────────── */}
+      <Grid numItemsLg={2} className="gap-4">
+        {/* Bar Chart — Concluídas por semana */}
+        <Card>
+          <Title>Concluídas por semana (últimas 8)</Title>
           {loading ? (
-            <div className="h-48 bg-app-border rounded animate-pulse" />
+            <div className="h-48 bg-gray-100 rounded animate-pulse mt-4" />
           ) : (
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={weeklyChart} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
-                <XAxis dataKey="semana" tick={{ fontSize: 10, fill: "var(--app-muted)" }} tickLine={false} axisLine={false} />
-                <YAxis tick={{ fontSize: 10, fill: "var(--app-muted)" }} tickLine={false} axisLine={false} allowDecimals={false} />
-                <Tooltip content={<CustomTooltip />} cursor={{ fill: "var(--app-border)" }} />
-                <Bar dataKey="concluídas" fill="#0078D4" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            <BarChart
+              className="mt-4 h-48"
+              data={weeklyChart}
+              index="Semana"
+              categories={["Concluídas"]}
+              colors={["blue"]}
+              yAxisWidth={28}
+              showAnimation
+              showLegend={false}
+            />
           )}
-        </div>
+        </Card>
 
-        {/* Priority pie chart */}
-        <div className="bg-app-card border border-app-border rounded-2xl p-5">
-          <h2 className="text-sm font-semibold text-app-text mb-4">Distribuição por prioridade</h2>
+        {/* Donut Chart — Distribuição por prioridade */}
+        <Card>
+          <Title>Distribuição por prioridade</Title>
           {loading ? (
-            <div className="h-48 bg-app-border rounded animate-pulse" />
+            <div className="h-48 bg-gray-100 rounded animate-pulse mt-4" />
           ) : priorityChart.length === 0 ? (
-            <div className="h-48 flex items-center justify-center text-app-muted text-sm">
+            <div className="h-48 flex items-center justify-center text-gray-400 text-sm">
               Nenhuma tarefa encontrada
             </div>
           ) : (
-            <ResponsiveContainer width="100%" height={200}>
-              <PieChart>
-                <Pie data={priorityChart} dataKey="value" cx="50%" cy="50%" outerRadius={70} label={false} labelLine={false} style={{ fontSize: 10 }}>
-                  {priorityChart.map((entry, i) => (
-                    <Cell key={i} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(v) => [`${v} tarefa(s)`, ""]} contentStyle={{ backgroundColor: "var(--app-surface)", border: "1px solid var(--app-border)", borderRadius: 8, fontSize: 12 }} />
-              </PieChart>
-            </ResponsiveContainer>
+            <>
+              <DonutChart
+                className="mt-4 h-36"
+                data={priorityChart}
+                category="tarefas"
+                index="prioridade"
+                colors={priorityColors}
+                showAnimation
+                valueFormatter={(v) => `${v} tarefa${v !== 1 ? "s" : ""}`}
+              />
+              <Legend
+                className="mt-3"
+                categories={priorityChart.map((d) => d.prioridade)}
+                colors={priorityColors}
+              />
+            </>
           )}
-        </div>
-      </div>
+        </Card>
+      </Grid>
 
-      {/* Type chart */}
-      <div className="bg-app-card border border-app-border rounded-2xl p-5">
-        <h2 className="text-sm font-semibold text-app-text mb-4">Distribuição por tipo</h2>
+      {/* Donut Chart — Distribuição por tipo */}
+      <Card>
+        <Title>Distribuição por tipo de tarefa</Title>
         {loading ? (
-          <div className="h-48 bg-app-border rounded animate-pulse" />
+          <div className="h-48 bg-gray-100 rounded animate-pulse mt-4" />
         ) : typeChart.length === 0 ? (
-          <div className="h-48 flex items-center justify-center text-app-muted text-sm">
+          <div className="h-48 flex items-center justify-center text-gray-400 text-sm">
             Nenhuma tarefa encontrada
           </div>
         ) : (
-          <ResponsiveContainer width="100%" height={200}>
-            <PieChart>
-              <Pie data={typeChart} dataKey="value" cx="50%" cy="50%" innerRadius={45} outerRadius={75}>
-                {typeChart.map((entry, i) => (
-                  <Cell key={i} fill={entry.color} />
-                ))}
-              </Pie>
-              <Legend iconType="circle" iconSize={8} formatter={(v) => <span style={{ fontSize: 11, color: "var(--app-text)" }}>{v}</span>} />
-              <Tooltip formatter={(v) => [`${v} tarefa(s)`, ""]} contentStyle={{ backgroundColor: "var(--app-surface)", border: "1px solid var(--app-border)", borderRadius: 8, fontSize: 12 }} />
-            </PieChart>
-          </ResponsiveContainer>
+          <Grid numItemsSm={2} className="mt-4 gap-6">
+            <DonutChart
+              className="h-44"
+              data={typeChart}
+              category="tarefas"
+              index="tipo"
+              colors={typeColors}
+              showAnimation
+              valueFormatter={(v) => `${v} tarefa${v !== 1 ? "s" : ""}`}
+            />
+            <Legend
+              className="self-center"
+              categories={typeChart.map((d) => d.tipo)}
+              colors={typeColors}
+            />
+          </Grid>
         )}
-      </div>
+      </Card>
     </div>
   );
 }
