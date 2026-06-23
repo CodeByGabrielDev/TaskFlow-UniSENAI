@@ -254,7 +254,7 @@ taskflow/
 
 A aplicação está publicada no **Vercel**:
 
-🔗 **[taskflow-app.vercel.app](https://taskflow-app.vercel.app)** ← _substitua pelo link real_
+🔗 **[task-flow-uni-senai.vercel.app](https://task-flow-uni-senai.vercel.app)**
 
 Para fazer seu próprio deploy no Vercel:
 
