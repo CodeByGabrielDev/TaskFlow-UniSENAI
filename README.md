@@ -266,5 +266,5 @@ Para fazer seu próprio deploy no Vercel:
 ---
 
 <p align="center">
-  Desenvolvido por <strong>Gabriel Lima de Oliveira</strong> · UniSENAI 2025
+  Desenvolvido por <strong>Gabriel Lima de Oliveira e Guilherme Aniel</strong> · UniSENAI 2025
 </p>
