@@ -43,7 +43,7 @@ export function DeleteAccountModal({ isOpen, onClose }: DeleteAccountModalProps)
     document.cookie = "taskflow_session=; path=/; max-age=0";
     await logout();
     toast.success("Conta excluída com sucesso.");
-    router.replace("/");
+    window.location.href = "/";
   };
 
   // ── Primeira tentativa de exclusão ────────────────────────────────────────

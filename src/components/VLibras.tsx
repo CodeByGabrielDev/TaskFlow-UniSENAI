@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
+import Script from "next/script";
 
 declare global {
   interface Window {
@@ -11,38 +12,45 @@ declare global {
 }
 
 export function VLibras() {
+  const containerRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
-    if (document.getElementById("vlibras-script")) return;
+    const el = containerRef.current;
+    if (!el) return;
+    el.setAttribute("vw", "");
+    el.classList.add("enabled");
 
-    const div = document.createElement("div");
-    div.setAttribute("vw", "");
-    div.setAttribute("class", "enabled");
-    div.innerHTML =
-      '<div vw-access-button class="active"></div>' +
-      '<div vw-plugin-wrapper><div class="vw-plugin-top-wrapper"></div></div>';
-    document.body.appendChild(div);
+    const btn = el.children[0] as HTMLElement | undefined;
+    btn?.setAttribute("vw-access-button", "");
+    btn?.classList.add("active");
 
-    const script = document.createElement("script");
-    script.id = "vlibras-script";
-    script.src = "https://vlibras.gov.br/app/vlibras-plugin.js";
-    script.async = true;
-
-    script.onload = () => {
-      try {
-        if (window.VLibras?.Widget) {
-          new window.VLibras.Widget("https://vlibras.gov.br/app");
-        }
-      } catch (e) {
-        console.warn("VLibras: falha ao inicializar", e);
-      }
-    };
-
-    script.onerror = () => {
-      console.warn("VLibras: script não pôde ser carregado.");
-    };
-
-    document.body.appendChild(script);
+    const wrapper = el.children[1] as HTMLElement | undefined;
+    wrapper?.setAttribute("vw-plugin-wrapper", "");
   }, []);
 
-  return null;
+  return (
+    <>
+      <div ref={containerRef}>
+        <div />
+        <div>
+          <div className="vw-plugin-top-wrapper" />
+        </div>
+      </div>
+
+      <Script
+        src="https://vlibras.gov.br/app/vlibras-plugin.js"
+        strategy="afterInteractive"
+        onLoad={() => {
+          try {
+            if (window.VLibras?.Widget) {
+              new window.VLibras.Widget("https://vlibras.gov.br/app");
+            }
+          } catch (e) {
+            console.warn("VLibras: falha ao inicializar", e);
+          }
+        }}
+        onError={() => console.warn("VLibras: script não pôde ser carregado.")}
+      />
+    </>
+  );
 }

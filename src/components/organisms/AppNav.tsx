@@ -46,7 +46,7 @@ export function AppNav() {
     document.cookie = "taskflow_session=; path=/; max-age=0";
     await logout();
     toast.success("Você saiu da conta.");
-    router.replace("/");
+    window.location.href = "/";
   };
 
   const cycleTheme = () => {

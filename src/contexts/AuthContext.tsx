@@ -64,12 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
-    setLoading(true);
-    try {
-      await firebaseLogout();
-    } finally {
-      setLoading(false);
-    }
+    await firebaseLogout();
   }, []);
 
   const refreshUser = useCallback(async () => {
