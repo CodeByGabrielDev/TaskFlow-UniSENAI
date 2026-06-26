@@ -6,11 +6,13 @@ import { cn } from "@/lib/utils";
 export const TextGenerateEffect = ({
   words,
   className,
+  textClassName,
   filter = true,
   duration = 0.5,
 }: {
   words: string;
   className?: string;
+  textClassName?: string;
   filter?: boolean;
   duration?: number;
 }) => {
@@ -30,7 +32,7 @@ export const TextGenerateEffect = ({
       }
     );
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scope.current]);
+  }, []);
 
   const renderWords = () => {
     return (
@@ -38,7 +40,7 @@ export const TextGenerateEffect = ({
         {wordsArray.map((word, idx) => (
           <motion.span
             key={idx}
-            className="text-gray-900 dark:text-white opacity-0"
+            className={cn("text-gray-900 opacity-0", textClassName)}
             style={{
               filter: filter ? "blur(10px)" : "none",
             }}
@@ -53,7 +55,7 @@ export const TextGenerateEffect = ({
   return (
     <div className={cn("font-bold", className)}>
       <div className="mt-4">
-        <div className="text-gray-900 dark:text-white text-4xl md:text-5xl leading-tight">
+        <div className="text-4xl md:text-5xl leading-tight">
           {renderWords()}
         </div>
       </div>

@@ -4,7 +4,9 @@ import { useEffect } from "react";
 
 declare global {
   interface Window {
-    VLibras?: unknown;
+    VLibras?: {
+      Widget: new (url: string) => void;
+    };
   }
 }
 
@@ -27,10 +29,8 @@ export function VLibras() {
 
     script.onload = () => {
       try {
-        if (window.VLibras && typeof window.VLibras === "function") {
-          new (window.VLibras as new (url: string) => void)(
-            "https://vlibras.gov.br/app"
-          );
+        if (window.VLibras?.Widget) {
+          new window.VLibras.Widget("https://vlibras.gov.br/app");
         }
       } catch (e) {
         console.warn("VLibras: falha ao inicializar", e);
