@@ -131,7 +131,7 @@ export function LoginForm() {
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
           <input id="email" type="email" autoComplete="email" placeholder="seu@email.com"
-            className={`w-full px-3 py-2.5 border rounded-lg text-sm outline-none transition-colors
+            className={`w-full px-3 py-2.5 border rounded-lg text-sm text-gray-900 outline-none transition-colors
               focus:ring-2 focus:ring-blue-500 focus:border-blue-500
               ${errors.email ? "border-red-400 bg-red-50" : "border-gray-300 bg-white"}`}
             {...register("email")} />
@@ -143,7 +143,7 @@ export function LoginForm() {
           <div className="relative">
             <input id="password" type={showPassword ? "text" : "password"}
               autoComplete="current-password" placeholder="Sua senha"
-              className={`w-full px-3 py-2.5 pr-10 border rounded-lg text-sm outline-none transition-colors
+              className={`w-full px-3 py-2.5 pr-10 border rounded-lg text-sm text-gray-900 outline-none transition-colors
                 focus:ring-2 focus:ring-blue-500 focus:border-blue-500
                 ${errors.password ? "border-red-400 bg-red-50" : "border-gray-300 bg-white"}`}
               {...register("password")} />

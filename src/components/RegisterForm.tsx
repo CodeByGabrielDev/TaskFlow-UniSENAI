@@ -139,7 +139,7 @@ export function RegisterForm() {
           type="text"
           autoComplete="name"
           placeholder="Seu nome"
-          className={`w-full px-3 py-2.5 border rounded-lg text-sm outline-none transition-colors
+          className={`w-full px-3 py-2.5 border rounded-lg text-sm text-gray-900 outline-none transition-colors
             focus:ring-2 focus:ring-blue-500 focus:border-blue-500
             ${errors.name ? "border-red-400 bg-red-50" : "border-gray-300 bg-white"}`}
           {...register("name")}
@@ -159,7 +159,7 @@ export function RegisterForm() {
           type="email"
           autoComplete="email"
           placeholder="seu@email.com"
-          className={`w-full px-3 py-2.5 border rounded-lg text-sm outline-none transition-colors
+          className={`w-full px-3 py-2.5 border rounded-lg text-sm text-gray-900 outline-none transition-colors
             focus:ring-2 focus:ring-blue-500 focus:border-blue-500
             ${errors.email ? "border-red-400 bg-red-50" : "border-gray-300 bg-white"}`}
           {...register("email")}
@@ -180,7 +180,7 @@ export function RegisterForm() {
             type={showPassword ? "text" : "password"}
             autoComplete="new-password"
             placeholder="Crie uma senha forte"
-            className={`w-full px-3 py-2.5 pr-10 border rounded-lg text-sm outline-none transition-colors
+            className={`w-full px-3 py-2.5 pr-10 border rounded-lg text-sm text-gray-900 outline-none transition-colors
               focus:ring-2 focus:ring-blue-500 focus:border-blue-500
               ${errors.password ? "border-red-400 bg-red-50" : "border-gray-300 bg-white"}`}
             {...register("password")}
@@ -211,7 +211,7 @@ export function RegisterForm() {
             type={showConfirm ? "text" : "password"}
             autoComplete="new-password"
             placeholder="Repita a senha"
-            className={`w-full px-3 py-2.5 pr-10 border rounded-lg text-sm outline-none transition-colors
+            className={`w-full px-3 py-2.5 pr-10 border rounded-lg text-sm text-gray-900 outline-none transition-colors
               focus:ring-2 focus:ring-blue-500 focus:border-blue-500
               ${errors.confirmPassword ? "border-red-400 bg-red-50" : "border-gray-300 bg-white"}`}
             {...register("confirmPassword")}
