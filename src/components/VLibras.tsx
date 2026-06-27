@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect } from "react";
-import Script from "next/script";
 
 declare global {
   interface Window {
@@ -22,25 +21,21 @@ export function VLibras() {
       '<div vw-access-button class="active"></div>' +
       '<div vw-plugin-wrapper><div class="vw-plugin-top-wrapper"></div></div>';
     document.body.appendChild(div);
+
+    const script = document.createElement("script");
+    script.src = "https://vlibras.gov.br/app/vlibras-plugin.js";
+    script.onload = () => {
+      try {
+        if (window.VLibras?.Widget) {
+          new window.VLibras.Widget("https://vlibras.gov.br/app");
+        }
+      } catch (e) {
+        console.warn("VLibras: falha ao inicializar", e);
+      }
+    };
+    script.onerror = () => console.warn("VLibras: script não pôde ser carregado.");
+    document.head.appendChild(script);
   }, []);
 
-  return (
-    <Script
-      id="vlibras-script"
-      src="https://vlibras.gov.br/app/vlibras-plugin.js"
-      strategy="afterInteractive"
-      onLoad={() => {
-        try {
-          if (window.VLibras?.Widget) {
-            new window.VLibras.Widget("https://vlibras.gov.br/app");
-          }
-        } catch (e) {
-          console.warn("VLibras: falha ao inicializar", e);
-        }
-      }}
-      onError={() => {
-        console.warn("VLibras: script não pôde ser carregado.");
-      }}
-    />
-  );
+  return null;
 }
