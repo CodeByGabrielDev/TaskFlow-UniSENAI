@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+[vw] {
+  z-index: 9999 !important;
+}
+
 /* ─── Aceternity Spotlight Animation ──────────────────────────────────────── */
 @keyframes spotlight {
   0% {
