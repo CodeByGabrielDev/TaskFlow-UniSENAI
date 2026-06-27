@@ -23,7 +23,7 @@ export function VLibras() {
     document.body.appendChild(div);
 
     const script = document.createElement("script");
-    script.src = "https://vlibras.gov.br/app/vlibras-plugin.js";
+    script.src = "https://cdn.jsdelivr.net/gh/spbgovbr-vlibras/vlibras-portal@sgd/app/vlibras-plugin.js";
     script.onload = () => {
       try {
         if (window.VLibras?.Widget) {
