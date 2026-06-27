@@ -199,7 +199,7 @@ export default function HomePage() {
       </nav>
 
       {/* ── Hero (Aceternity Spotlight) ─────────────────────────────────────── */}
-      <section className="relative flex flex-col items-center justify-center py-20 px-6 overflow-hidden bg-gradient-to-b from-white via-blue-50/40 to-white">
+      <section id="main-content" role="main" className="relative flex flex-col items-center justify-center py-20 px-6 overflow-hidden bg-gradient-to-b from-white via-blue-50/40 to-white">
         {/* Aceternity Spotlight */}
         <Spotlight className="-top-40 left-0 md:left-60 md:-top-20" fill="#3b82f6" />
 

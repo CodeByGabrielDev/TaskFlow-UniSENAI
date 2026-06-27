@@ -12,7 +12,7 @@ export function AppLayout({ children }: AppLayoutProps) {
     <ProtectedRoute>
       <AppNav />
       <div className="md:pl-60 pt-14 md:pt-0 min-h-screen bg-app-bg">
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+        <main id="main-content" role="main" className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
           {children}
         </main>
       </div>

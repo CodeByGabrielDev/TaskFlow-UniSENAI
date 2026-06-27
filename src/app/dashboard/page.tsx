@@ -244,6 +244,7 @@ function DashboardContent() {
               yAxisWidth={28}
               showAnimation
               showLegend={false}
+              aria-label="Gráfico de barras: tarefas concluídas por semana nas últimas 8 semanas"
             />
           )}
         </Card>
@@ -267,6 +268,7 @@ function DashboardContent() {
                 colors={priorityColors}
                 showAnimation
                 valueFormatter={(v) => `${v} tarefa${v !== 1 ? "s" : ""}`}
+                aria-label="Gráfico de rosca: distribuição de tarefas por prioridade (alta, média, baixa)"
               />
               <Legend
                 className="mt-3"
@@ -297,6 +299,7 @@ function DashboardContent() {
               colors={typeColors}
               showAnimation
               valueFormatter={(v) => `${v} tarefa${v !== 1 ? "s" : ""}`}
+              aria-label="Gráfico de rosca: distribuição de tarefas por tipo (tarefa, feature, bug, melhoria, user story)"
             />
             <Legend
               className="self-center"
